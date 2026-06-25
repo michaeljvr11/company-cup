@@ -26,14 +26,23 @@ Code lives in `f1/`. The shared contracts (model, physics, scoring, output) are 
 the **simulator** (`f1/simulate.py`) and **optimiser** (`f1/strategy.py`) are the two
 remaining tracks — see WORKPLAN.
 
-## Status
+## Status — all four levels tuned, clean (0 crashes, 0 blowouts), deterministic
 
-- ✅ Scaffold, data model, physics, scoring, submission serialiser, CLI.
-- ✅ Track A: race simulator (`f1/simulate.py`) — all-level physics, verified on L1.
-- ✅ Track B: optimiser (`f1/strategy.py`) — **Level 1 fully optimised & verified**
-  (flat-out, late braking to the corner limit, fastest start tyre; clean run, score ≈ 202k).
-  Levels 2-4 produce valid crash-free strategies but their scoring is untuned pending
-  real level files (see [docs/WORKPLAN.md](docs/WORKPLAN.md)).
+| Level | Score | Notes |
+|-------|------:|-------|
+| L1 | ~201,934 | flat-out, late braking to the corner limit, Soft tyres |
+| L2 | ~913,471 | + minimal refuel pits (fuel is ~distance-bound, so ≈ optimal) |
+| L3 | ~859,196 | + per-lap weather-aware braking/corner speeds (Soft wins every L3 weather) |
+| L4 | ~1,490,777 | + degradation: wear-balanced tyre stints across all 9 sets, weather-matched |
 
-Level 1: `python -m f1 levels/level1.json output/level1.txt --level 1` → 50 laps,
-0 crashes, finishes on fuel, ~4952 s. `python -m pytest` → 7 passing.
+Generate every submission and see the score breakdown:
+
+```bash
+for n in 1 2 3 4; do python -m f1 levels/level$n.json output/level$n.txt --level $n; done
+python tools/eval.py          # score breakdown per level (tuning harness)
+python -m pytest              # 14 passing
+```
+
+Outputs are byte-identical across separate processes (required for submission validity).
+See [docs/WORKPLAN.md](docs/WORKPLAN.md) for the optimisation approach, remaining ideas,
+and **open questions to validate against the real leaderboard**.

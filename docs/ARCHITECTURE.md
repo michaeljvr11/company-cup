@@ -13,21 +13,22 @@ f1/
   physics.py      Pure formulas (friction, kinematics, fuel, wear). [DONE — shared]
   score.py        Scoring formulas per level.        [DONE]
   strategy_io.py  Strategy dataclasses + submission .txt serialiser. [DONE — shared contract]
-  simulate.py     Race simulator state machine.      [DONE — all levels]
-  strategy.py     Per-level optimiser.               [DONE — L1 optimised+verified; L2-4 safe baseline]
+  simulate.py     Race simulator + per-set tyre wear. [DONE — all levels]
+  strategy.py     Optimiser (static L1/L2; weather+wear-aware L3/L4). [DONE — tuned]
   cli.py          python -m f1 <level.json> [out] [--level N]. [DONE — wiring]
   __main__.py     module entry point.                [DONE]
-levels/           level JSONs (level1.json provided; level2-4 land here).
+levels/           level{1,2,3,4}.json.
 output/           generated submission .txt files (gitignored).
-tests/            test_smoke.py [DONE], test_simulate.py [grows with Track A].
+tools/eval.py     score-breakdown harness for tuning.
+tests/            test_smoke, test_simulate (L1 golden), test_levels (L1-4 clean + floors).
 docs/             PROBLEM, PHYSICS, ARCHITECTURE, WORKPLAN.
 ```
 
-All modules are implemented. The shared/`contract` ones are frozen — extend, don't
-reshape. Level 1 is fully optimised and verified against the simulator; levels 2-4
-produce valid, crash-free, race-finishing strategies but their scoring (fuel-bonus
-targeting, weather tyre windows, per-stint corner re-planning) is untuned until real
-level files land — see WORKPLAN.md "Remaining".
+All modules are implemented and all four levels are tuned: clean (0 crashes, 0 blowouts),
+deterministic, scoring ~3.47M total. The shared/`contract` modules are frozen — extend,
+don't reshape. The simulator tracks per-set tyre wear (spec: sets retain wear across
+swaps). See WORKPLAN.md for the per-level approach and the open questions to validate
+against the real leaderboard.
 
 ## The two contracts that decouple everything
 

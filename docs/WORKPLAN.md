@@ -1,12 +1,58 @@
 # Work Plan — parallel tracks for 2 people + agents
 
-**Status:** scaffold + both tracks implemented. The simulator (`simulate.py`) models all
-levels and is verified on L1. The optimiser (`strategy.py`) fully solves L1 and produces
-valid, crash-free baselines for L2-4. What's left is **scoring tuning for L2-4**, which
-needs the real level files (we only have `level1.json`). See "Remaining" below.
+**Status:** all four levels implemented, tuned, and clean (0 crashes, 0 blowouts,
+deterministic). Current scores: L1 ~201,934 · L2 ~913,471 · L3 ~859,196 · L4 ~1,490,777
+(grand total ~3.47M). `python tools/eval.py` prints the live breakdown.
 
-The original split (two independent tracks behind frozen contracts) still holds for
-that remaining work — A owns `simulate.py`, B owns `strategy.py`.
+The split still holds for further work — A owns `simulate.py`, B owns `strategy.py`.
+
+## How each level is solved (`f1/strategy.py`)
+
+- **L1 / L2** (`_static_plan`): dry, single-condition, no degradation. Flat-out target,
+  brake as late as possible to the corner limit, fastest start tyre (Soft). L2 adds
+  simulator-driven refuel pits (`_repair_fuel`) — minimal count, since the tank (150 L) is
+  far below total burn.
+- **L3 / L4** (`_weather_plan`): weather varies, so corner speeds and braking points are
+  planned **per lap** against the conditions in effect then. Iterate-and-simulate: simulate
+  → read each lap's weather (and L4 degradation) from the result → re-plan → repeat. Two
+  guards keep it crash/blowout-free despite the plan shifting lap timing:
+  - Laps that ever crash are pinned to **worst-case weather + full wear** (can't crash).
+  - L4 tyre stints are **balanced by wear** across all 9 sets (`_tyre_schedule_l4`), so no
+    set blows out; set *ids* are matched to each stint's weather (Wet in heavy rain).
+
+## Key findings (drove the tuning)
+
+1. **Fuel is ~98% distance-bound.** The drag coefficient is tiny (1.5e-9), so fuel_used is
+   set by laps×track-length, almost independent of speed — and it sits *above* every soft
+   cap. So fuel_bonus is effectively fixed (~815k each for L2-4); you can't slow down to
+   reach the cap without losing far more time. ⇒ drive flat-out; just minimise pits.
+2. **L3: Soft is the highest-friction tyre in every L3 weather**, so no tyre changes — the
+   only weather effect is corner speed (friction) and braking (decel multiplier).
+3. **L4: tyre_bonus dominates** (100k × Σdegradation). Σdeg ≈ *total wear produced*,
+   independent of how many sets you use — so the win is to spread wear across sets so none
+   blows out (a blowout costs 50k *and* triggers limp mode = big time loss), and to drive
+   fast (more corner/braking wear = more bonus). Wet's base friction is 1.6 here (not 1.1).
+
+## Remaining ideas (diminishing returns; bonuses already near-fixed)
+
+- L4: push Σdeg higher (currently 6.55 of a ~8.5 ceiling) by cornering closer to the live
+  grip limit — tried, but tightening the degradation margin destabilised convergence
+  (crashes/blowouts returned). Needs a more stable per-stint wear model, not just a smaller
+  margin.
+- L2/L4: combine refuel with tyre-change pits where laps align, to save base pit time.
+- L3: trim the few transition laps that are planned conservatively.
+
+## ⚠ Open questions — VALIDATE AGAINST THE REAL LEADERBOARD before trusting these scores
+
+- **`time_reference_s`** appears in every level file (L4: 50800) but **not** in the
+  documented `base_score = 1e9/time`. The real scoring may normalise time against this
+  reference, which would weight time far more heavily than our base term does. If so, time
+  matters much more than our breakdown suggests — re-tune toward lower time.
+- **Crashing raises Σdeg** (+0.1 wear per crash) with only a 10 s time penalty, so against
+  our simulator deliberate crashing can *increase* the tyre bonus. We deliberately do **not**
+  exploit this (clean driving), as it's almost certainly penalised harder on the real
+  leaderboard (see the time_reference question). Confirm before changing stance.
+- The two friction ambiguities in [PHYSICS.md](PHYSICS.md) are still unresolved.
 
 ## The split
 

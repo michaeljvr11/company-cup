@@ -54,6 +54,8 @@ class Result:
     crashes: int
     finished: bool
     segments: list[SegmentResult] = field(default_factory=list)
+    lap_starts: dict[int, float] = field(default_factory=dict)  # lap -> elapsed at lap start
+    lap_peak_degradation: dict[int, float] = field(default_factory=dict)  # lap -> tyre deg at lap end
 
 
 def features(level_num: int) -> dict:
@@ -68,19 +70,23 @@ def simulate(level: Level, strategy: Strategy, apply_degradation: bool = True) -
 
     speed = 0.0
     tank = car.initial_fuel
-    tyre = level.tyre_props(strategy.initial_tyre_id)
-    degradation = 0.0
+    current_set = strategy.initial_tyre_id
+    tyre = level.tyre_props(current_set)
+    degradation = 0.0  # wear on the currently-mounted set
+    set_deg: dict[int, float] = {}  # per-set wear retained across swaps (spec: sets keep wear)
     elapsed = 0.0
     mode = "normal"  # normal | crawl | limp
 
     fuel_consumed = 0.0
-    total_deg_used = 0.0
     blowouts = 0
     crashes = 0
     results: list[SegmentResult] = []
+    lap_starts: dict[int, float] = {}
+    lap_peak_deg: dict[int, float] = {}
 
     segs = level.track.segments
     for lap in strategy.laps:
+        lap_starts[lap.lap] = elapsed
         action_by_id = {a.id: a for a in lap.segments}
         for seg in segs:
             entry = speed
@@ -160,15 +166,17 @@ def simulate(level: Level, strategy: Strategy, apply_degradation: bool = True) -
                 SegmentResult(lap.lap, seg.id, seg.type, entry, v_exit, seg_time, seg_fuel, seg_deg, crashed, limp_here)
             )
 
+        lap_peak_deg[lap.lap] = degradation
+
         # pit stop (lap end only)
         pit = lap.pit
         if pit.enter:
             extra = race.base_pit_stop_time
-            if pit.tyre_change_set_id:
-                if apply_degradation:
-                    total_deg_used += degradation
-                tyre = level.tyre_props(pit.tyre_change_set_id)
-                degradation = 0.0
+            if pit.tyre_change_set_id and pit.tyre_change_set_id != current_set:
+                set_deg[current_set] = degradation  # bank current set's wear
+                current_set = pit.tyre_change_set_id
+                tyre = level.tyre_props(current_set)
+                degradation = set_deg.get(current_set, 0.0)  # resume this set's retained wear
                 extra += race.pit_tyre_swap_time
             if pit.fuel_refuel_amount and pit.fuel_refuel_amount > 0:
                 amount = min(pit.fuel_refuel_amount, car.fuel_tank_capacity - tank)
@@ -178,8 +186,8 @@ def simulate(level: Level, strategy: Strategy, apply_degradation: bool = True) -
             mode = "normal"
             speed = race.pit_exit_speed
 
-    if apply_degradation:
-        total_deg_used += degradation
+    set_deg[current_set] = degradation
+    total_deg_used = sum(set_deg.values()) if apply_degradation else 0.0
 
     return Result(
         total_time=elapsed,
@@ -189,4 +197,6 @@ def simulate(level: Level, strategy: Strategy, apply_degradation: bool = True) -
         crashes=crashes,
         finished=True,
         segments=results,
+        lap_starts=lap_starts,
+        lap_peak_degradation=lap_peak_deg,
     )
