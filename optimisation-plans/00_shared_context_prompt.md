@@ -22,11 +22,11 @@ intentionally add new APIs and wire them through the CLI/tests.
 Current verified simulator scores from `python3 tools/eval.py`:
 
 ```text
-L1  201,934   0 crashes, 0 blowouts, 0 pits
-L2  913,471   0 crashes, 0 blowouts, 2 pits
+L1  202,038   0 crashes, 0 blowouts, 0 pits
+L2  913,747   0 crashes, 0 blowouts, 2 pits
 L3  859,196   0 crashes, 0 blowouts, 3 pits
 L4 1,490,777  0 crashes, 0 blowouts, 14 pits / 8 tyre changes
-Grand total: 3,465,378
+Grand total: 3,465,758
 ```
 
 Prior-session external scores to beat / reconcile:
@@ -231,13 +231,16 @@ public level-dispatched entry point in `f1/strategy.py`:
 
 ```text
 Level 1:
-  `_static_plan`: try the first id from each available tyre set, generate a
-  flat-out plan, brake analytically for each upcoming corner chain, simulate,
-  and choose the clean fastest candidate.
+  `_static_plan`: try the first id from each available tyre set and sweep dry
+  safety factors, generate a flat-out plan, brake analytically for each upcoming
+  corner chain, simulate, and choose the clean fastest candidate.
 
 Level 2:
-  Same static speed plan as Level 1 plus `_repair_fuel`, which inserts
-  refuel-to-full pits before the first lap that would limp.
+  `_level2_fuel_portfolio_plan`: flat-out dry speed plan on the best dry tyre,
+  use the tightest Level 1 dry safety factor, enumerate feasible two-stop pit
+  schedules, compute minimal refuel amounts from simulated lap fuel burn, and
+  select the best clean candidate using simulator score plus a
+  `time_reference_s`-weighted time proxy.
 
 Level 3:
   `_weather_plan`: iterate simulate -> sample per-lap weather/deceleration ->
@@ -262,7 +265,7 @@ Level 1:
   braking-point refinement / validation pass
 
 Level 2:
-  current flat-out + fuel repair baseline
+  current flat-out + lap-level minimal-refuel pit portfolio
   fuel-aware resource-constrained dynamic programming
   Lagrangian fuel/time sweep
   continuous speed refinement

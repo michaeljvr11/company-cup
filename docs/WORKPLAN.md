@@ -1,7 +1,7 @@
 # Work Plan — parallel tracks for 2 people + agents
 
 **Status:** all four levels implemented, tuned, and clean (0 crashes, 0 blowouts,
-deterministic). Current scores: L1 ~201,934 · L2 ~913,471 · L3 ~859,196 · L4 ~1,490,777
+deterministic). Current scores: L1 ~202,038 · L2 ~913,747 · L3 ~859,196 · L4 ~1,490,777
 (grand total ~3.47M). `python tools/eval.py` prints the live breakdown.
 
 **External scores to beat / reconcile from prior session:** L1 **1,601,646** ·
@@ -15,10 +15,12 @@ The split still holds for further work — A owns `simulate.py`, B owns `strateg
 
 ## How each level is solved (`f1/strategy.py`)
 
-- **L1 / L2** (`_static_plan`): dry, single-condition, no degradation. Flat-out target,
-  brake as late as possible to the corner limit, fastest start tyre (Soft). L2 adds
-  simulator-driven refuel pits (`_repair_fuel`) — minimal count, since the tank (150 L) is
-  far below total burn.
+- **L1** (`_static_plan`): dry, single-condition, no degradation. Flat-out target,
+  safety-factor sweep, brake as late as possible to the corner limit, fastest start tyre
+  (Soft).
+- **L2** (`_level2_fuel_portfolio_plan`): same dry flat-out line using the tightest L1
+  safety factor, then enumerate feasible two-stop schedules and refuel only the fuel
+  needed to finish each stint.
 - **L3 / L4** (`_weather_plan`): weather varies, so corner speeds and braking points are
   planned **per lap** against the conditions in effect then. Iterate-and-simulate: simulate
   → read each lap's weather (and L4 degradation) from the result → re-plan → repeat. Two
@@ -56,7 +58,7 @@ The split still holds for further work — A owns `simulate.py`, B owns `strateg
   L4 1,135,340) do not line up with the current local breakdown. If those are
   leaderboard scores for comparable submissions, `time_reference_s` or another
   hidden normalisation is likely involved. Current local eval telemetry:
-  L1 time 4,952.1s, L2 10,398.3s, L3 21,912.8s, L4 48,236.2s. Back-calculating
+  L1 time 4,949.6s, L2 10,367.6s, L3 21,912.8s, L4 48,236.2s. Back-calculating
   from the targets with current bonuses does not identify one clean formula, so
   capture official score + time/fuel/degradation from the exact submitted output
   before changing `f1/score.py`.
@@ -90,8 +92,11 @@ numbers in `tests/test_simulate.py`.
 - **L1 — fully optimised & verified.** Flat-out target (`max_speed`), latest-possible
   braking to enter each corner sequence at its limit (analytic `_optimal_brake_start`
   via a 2-lap forward pass), fastest start tyre chosen by simulation (Soft). Clean run,
-  ~4952 s, score ≈ 202k. Corners entered within 0.03 m/s of the limit.
-- **L2-L4 — valid, crash-free baselines.** Same speed plan + conservative corner limits
+  ~4949.6 s, score ≈ 202k. Corners entered close to the limit.
+- **L2 — lap-level fuel portfolio implemented.** Same dry speed plan using the tightest
+  L1 safety factor, then a deterministic two-stop search with minimal refuel amounts.
+  Clean run, ~10,367.6 s, score ≈ 913.7k.
+- **L3-L4 — valid, crash-free baselines.** Same speed plan + conservative corner limits
   (L3: lowest friction across weathers; L4: friction at full wear) + simulator-driven
   pit repair (`_repair_fuel`, `_repair_tyres`) so the race always finishes without
   limp/blowout. **Scoring is not yet optimised** (see Remaining).

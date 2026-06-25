@@ -2,15 +2,23 @@
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-Level 2 is currently handled inside `f1/strategy.py` by `_static_plan()` plus
-`_repair_fuel()`. The current solver drives flat-out, simulates the strategy, and
-inserts refuel-to-full pits before the first lap that would limp. Current verified
-output is clean and deterministic: score about 913,471, time about 10,398.3 s,
-fuel used about 312.6 L, 2 pits, no crashes and no blowouts.
+Level 2 was previously handled inside `f1/strategy.py` by `_static_plan()` plus
+`_repair_fuel()`. That baseline drove flat-out, simulated the strategy, and inserted
+refuel-to-full pits before the first lap that would limp. Previous verified output:
+score about 913,471, time about 10,398.3 s, fuel used about 312.6 L, 2 pits, no
+crashes and no blowouts.
 
-No DP, Lagrangian sweep, candidate portfolio, or public
-`solve_level2_fuel_dp()` API exists yet. Treat the DP content below as a future
-extension plan.
+A first lap-level portfolio solver is now wired through `build_strategy(level, 2)`.
+It keeps the flat-out speed plan, uses the tightest Level 1 dry safety factor, enumerates
+two-stop pit schedules, computes the minimal refuel needed for each feasible schedule,
+and selects by simulator score plus a `time_reference_s`-weighted proxy because the prior
+leaderboard scores suggest time may be normalised differently. Current result: score
+about 913,747, time about 10,367.6 s, fuel used about 312.6 L, 2 pits at laps 21 and
+33, no crashes and no blowouts.
+
+No segment-level DP, Lagrangian sweep, or public `solve_level2_fuel_dp()` API exists
+yet. The current implementation is a lap-level candidate portfolio for two-stop
+minimal-refuel schedules. Treat the DP content below as a future extension plan.
 
 ## Level 2 Constraints
 

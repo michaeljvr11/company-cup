@@ -57,7 +57,7 @@ Level 1:
   braking_refinement
 
 Level 2:
-  current_static_fuel_repair_baseline
+  current_lap_level_minimal_refuel_portfolio
   analytical_baseline
   fuel_dp
   fuel_lagrangian_sweep

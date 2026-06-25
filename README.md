@@ -30,8 +30,8 @@ remaining tracks — see WORKPLAN.
 
 | Level | Score | Notes |
 |-------|------:|-------|
-| L1 | ~201,934 | flat-out, late braking to the corner limit, Soft tyres |
-| L2 | ~913,471 | + minimal refuel pits (fuel is ~distance-bound, so ≈ optimal) |
+| L1 | ~202,038 | flat-out, safety-factor sweep, Soft tyres |
+| L2 | ~913,747 | + minimal-refuel two-stop portfolio (fuel is ~distance-bound, so ≈ optimal) |
 | L3 | ~859,196 | + per-lap weather-aware braking/corner speeds (Soft wins every L3 weather) |
 | L4 | ~1,490,777 | + degradation: wear-balanced tyre stints across all 9 sets, weather-matched |
 
