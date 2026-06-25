@@ -4,6 +4,13 @@
 deterministic). Current scores: L1 ~201,934 · L2 ~913,471 · L3 ~859,196 · L4 ~1,490,777
 (grand total ~3.47M). `python tools/eval.py` prints the live breakdown.
 
+**External scores to beat / reconcile from prior session:** L1 **1,601,646** ·
+L2 **2,108,044** · L3 **1,437,072** · L4 **1,135,340**. Treat these as the real
+optimisation targets unless disproven by a fresh leaderboard submission. Under the
+current local PDF formula, the built-in solver already beats L4 but is far below L1-L3,
+which strongly suggests either a scoring mismatch or that those scores came from a
+different strategy/evaluator.
+
 The split still holds for further work — A owns `simulate.py`, B owns `strategy.py`.
 
 ## How each level is solved (`f1/strategy.py`)
@@ -42,16 +49,20 @@ The split still holds for further work — A owns `simulate.py`, B owns `strateg
 - L2/L4: combine refuel with tyre-change pits where laps align, to save base pit time.
 - L3: trim the few transition laps that are planned conservatively.
 
-## ⚠ Open questions — VALIDATE AGAINST THE REAL LEADERBOARD before trusting these scores
+## Open questions
 
-- **`time_reference_s`** appears in every level file (L4: 50800) but **not** in the
-  documented `base_score = 1e9/time`. The real scoring may normalise time against this
-  reference, which would weight time far more heavily than our base term does. If so, time
-  matters much more than our breakdown suggests — re-tune toward lower time.
+- **`time_reference_s`** reopened. The PDF formula says `base_score = 1e9/time`, but
+  the prior-session target scores (L1 1,601,646; L2 2,108,044; L3 1,437,072;
+  L4 1,135,340) do not line up with the current local breakdown. If those are
+  leaderboard scores for comparable submissions, `time_reference_s` or another
+  hidden normalisation is likely involved. Current local eval telemetry:
+  L1 time 4,952.1s, L2 10,398.3s, L3 21,912.8s, L4 48,236.2s. Back-calculating
+  from the targets with current bonuses does not identify one clean formula, so
+  capture official score + time/fuel/degradation from the exact submitted output
+  before changing `f1/score.py`.
 - **Crashing raises Σdeg** (+0.1 wear per crash) with only a 10 s time penalty, so against
   our simulator deliberate crashing can *increase* the tyre bonus. We deliberately do **not**
-  exploit this (clean driving), as it's almost certainly penalised harder on the real
-  leaderboard (see the time_reference question). Confirm before changing stance.
+  exploit this — confirm against real leaderboard before changing stance.
 - The two friction ambiguities in [PHYSICS.md](PHYSICS.md) are still unresolved.
 
 ## The split

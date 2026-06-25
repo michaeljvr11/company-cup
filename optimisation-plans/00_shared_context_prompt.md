@@ -29,6 +29,22 @@ L4 1,490,777  0 crashes, 0 blowouts, 14 pits / 8 tyre changes
 Grand total: 3,465,378
 ```
 
+Prior-session external scores to beat / reconcile:
+
+```text
+L1 1,601,646
+L2 2,108,044
+L3 1,437,072
+L4 1,135,340
+```
+
+These targets do not match the current local PDF score formula. The local solver
+already beats the L4 target under `tools/eval.py`, but is far below the L1-L3
+targets. Keep this as evidence that the official leaderboard may use
+`time_reference_s` or another hidden normalisation, but do not change `f1/score.py`
+until we have the exact submitted strategy telemetry and official score for the
+same run.
+
 Your job is to improve this solver portfolio without breaking deterministic,
 clean submissions.
 

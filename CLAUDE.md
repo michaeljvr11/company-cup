@@ -6,6 +6,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 This is a company hackathon project. The goal is to ship something working, not something perfect. The project type is not yet decided.
 
+For this repo's F1 optimiser, prior-session external scores to beat / reconcile are:
+L1 1,601,646; L2 2,108,044; L3 1,437,072; L4 1,135,340. These do not match the
+current local `tools/eval.py` formula, so treat them as leaderboard targets and
+evidence that `time_reference_s` or another hidden normalisation may matter until
+the exact official formula is confirmed.
+
 ## Core Philosophy
 
 **Minimum viable code.** Every function, file, abstraction, and dependency must justify its existence against the immediate problem. When in doubt, leave it out.
