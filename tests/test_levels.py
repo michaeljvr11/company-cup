@@ -19,7 +19,7 @@ from f1.strategy import build_strategy
 from f1.strategy_io import to_submission
 
 ROOT = Path(__file__).resolve().parents[1]
-SCORE_FLOOR = {1: 200_000, 2: 900_000, 3: 850_000, 4: 1_450_000}
+SCORE_FLOOR = {1: 202_000, 2: 900_000, 3: 850_000, 4: 1_450_000}
 
 
 def _score(n, lvl, res):
@@ -46,7 +46,7 @@ def test_level_clean_and_scores(n):
     assert _score(n, lvl, res) >= SCORE_FLOOR[n]
 
 
-@pytest.mark.parametrize("n", [2, 3, 4])
+@pytest.mark.parametrize("n", [1, 2, 3, 4])
 def test_level_deterministic(n):
     lvl = load_level(str(ROOT / f"levels/level{n}.json"))
     a = to_submission(build_strategy(lvl, n))

@@ -38,7 +38,7 @@ def test_level1_optimiser_is_clean_and_fast():
     assert res.crashes == 0
     assert res.blowouts == 0
     assert res.fuel_used < level.car.initial_fuel  # finishes without refuelling
-    assert round(res.total_time, 1) == 4952.1  # golden time
+    assert round(res.total_time, 1) == 4949.6  # golden time
 
 
 def test_no_corner_exceeds_its_limit():

@@ -17,6 +17,14 @@ from f1.simulate import Result, features, simulate
 from f1.strategy_io import LapPlan, PitAction, SegmentAction, Strategy
 
 CORNER_SAFETY_STATIC = 0.999  # L1/L2: constant conditions, only guard FP rounding
+LEVEL1_SAFETY_FACTORS = (
+    CORNER_SAFETY_STATIC,
+    0.9999,
+    0.99999,
+    0.999991,
+    0.999992,
+    0.999993,
+)
 CORNER_SAFETY = 0.985  # L3/L4: also absorb mid-lap weather/wear drift
 DEG_MARGIN = 1.15  # L4: inflate the wear estimate when planning corner grip (crash safety)
 
@@ -29,16 +37,18 @@ def build_strategy(level: Level, level_num: int = 1) -> Strategy:
 
 def _static_plan(level: Level, level_num: int) -> Strategy:
     apply_degradation = features(level_num)["apply_degradation"]
+    safety_factors = LEVEL1_SAFETY_FACTORS if level_num == 1 else (CORNER_SAFETY_STATIC,)
     best_key: tuple[int, float, int] | None = None
     best_strat: Strategy | None = None
     for tyre_id in _candidate_start_tyres(level):
-        strat = _speed_plan(level, tyre_id, level_num)
-        if level_num >= 2:
-            strat = _repair_fuel(level, strat, apply_degradation)
-        res = simulate(level, strat, apply_degradation=apply_degradation)
-        key = (res.crashes + res.blowouts, res.total_time, tyre_id)
-        if best_key is None or key < best_key:
-            best_key, best_strat = key, strat
+        for safety_factor in safety_factors:
+            strat = _speed_plan(level, tyre_id, level_num, safety_factor)
+            if level_num >= 2:
+                strat = _repair_fuel(level, strat, apply_degradation)
+            res = simulate(level, strat, apply_degradation=apply_degradation)
+            key = (res.crashes + res.blowouts, res.total_time, tyre_id)
+            if best_key is None or key < best_key:
+                best_key, best_strat = key, strat
     assert best_strat is not None
     return best_strat
 
@@ -47,7 +57,9 @@ def _candidate_start_tyres(level: Level) -> list[int]:
     return [s.ids[0] for s in level.available_sets]
 
 
-def _safe_corner_speed(level: Level, tyre: TyreProps, level_num: int, start_weather: str, radius: float) -> float:
+def _safe_corner_speed(
+    level: Level, tyre: TyreProps, level_num: int, start_weather: str, radius: float, safety_factor: float
+) -> float:
     """Max safe entry speed for a corner, planned against the *worst* friction the tyre
     will see, so we never crash. Weather (>=3): lowest friction across all conditions.
     Degradation (>=4): friction at full wear (deg = life_span), the worst case before a
@@ -58,10 +70,10 @@ def _safe_corner_speed(level: Level, tyre: TyreProps, level_num: int, start_weat
         weathers = {start_weather}
     plan_deg = tyre.life_span if level_num >= 4 else 0.0
     friction = min(tyre_friction(tyre, plan_deg, w) for w in weathers)
-    return max_corner_speed(friction, radius, level.car.crawl_speed) * CORNER_SAFETY_STATIC
+    return max_corner_speed(friction, radius, level.car.crawl_speed) * safety_factor
 
 
-def _speed_plan(level: Level, tyre_id: int, level_num: int) -> Strategy:
+def _speed_plan(level: Level, tyre_id: int, level_num: int, safety_factor: float = CORNER_SAFETY_STATIC) -> Strategy:
     car = level.car
     segs = level.track.segments
     n = len(segs)
@@ -75,7 +87,7 @@ def _speed_plan(level: Level, tyre_id: int, level_num: int) -> Strategy:
         for _ in range(n):
             if segs[j].type != "corner":
                 break
-            safe = min(safe, _safe_corner_speed(level, tyre, level_num, start_weather, segs[j].radius))
+            safe = min(safe, _safe_corner_speed(level, tyre, level_num, start_weather, segs[j].radius, safety_factor))
             j = (j + 1) % n
         return safe
 
@@ -92,7 +104,7 @@ def _speed_plan(level: Level, tyre_id: int, level_num: int) -> Strategy:
                     speed, car.max_speed, b, seg.length, car.accel, car.brake, car.crawl_speed, car.max_speed
                 )
             else:
-                speed = min(speed, _safe_corner_speed(level, tyre, level_num, start_weather, seg.radius))
+                speed = min(speed, _safe_corner_speed(level, tyre, level_num, start_weather, seg.radius, safety_factor))
 
     laps = []
     for lap_no in range(1, level.race.laps + 1):
