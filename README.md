@@ -28,6 +28,12 @@ remaining tracks — see WORKPLAN.
 
 ## Status
 
-- ✅ Scaffold, data model, physics formulas, scoring, submission serialiser, CLI, L1 baseline.
-- ⬜ Track A: race simulator (`f1/simulate.py`).
-- ⬜ Track B: per-level optimiser (`f1/strategy.py`).
+- ✅ Scaffold, data model, physics, scoring, submission serialiser, CLI.
+- ✅ Track A: race simulator (`f1/simulate.py`) — all-level physics, verified on L1.
+- ✅ Track B: optimiser (`f1/strategy.py`) — **Level 1 fully optimised & verified**
+  (flat-out, late braking to the corner limit, fastest start tyre; clean run, score ≈ 202k).
+  Levels 2-4 produce valid crash-free strategies but their scoring is untuned pending
+  real level files (see [docs/WORKPLAN.md](docs/WORKPLAN.md)).
+
+Level 1: `python -m f1 levels/level1.json output/level1.txt --level 1` → 50 laps,
+0 crashes, finishes on fuel, ~4952 s. `python -m pytest` → 7 passing.

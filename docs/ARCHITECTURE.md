@@ -13,8 +13,8 @@ f1/
   physics.py      Pure formulas (friction, kinematics, fuel, wear). [DONE — shared]
   score.py        Scoring formulas per level.        [DONE]
   strategy_io.py  Strategy dataclasses + submission .txt serialiser. [DONE — shared contract]
-  simulate.py     Race simulator state machine.      [STUB — Track A]
-  strategy.py     Per-level optimiser (+ L1 baseline). [STUB/baseline — Track B]
+  simulate.py     Race simulator state machine.      [DONE — all levels]
+  strategy.py     Per-level optimiser.               [DONE — L1 optimised+verified; L2-4 safe baseline]
   cli.py          python -m f1 <level.json> [out] [--level N]. [DONE — wiring]
   __main__.py     module entry point.                [DONE]
 levels/           level JSONs (level1.json provided; level2-4 land here).
@@ -23,9 +23,11 @@ tests/            test_smoke.py [DONE], test_simulate.py [grows with Track A].
 docs/             PROBLEM, PHYSICS, ARCHITECTURE, WORKPLAN.
 ```
 
-`[DONE]` modules are frozen contracts — extend, don't reshape. The two `[STUB]`
-modules are the actual work and are independent of each other (both depend only on the
-frozen contracts), which is what makes parallel work safe.
+All modules are implemented. The shared/`contract` ones are frozen — extend, don't
+reshape. Level 1 is fully optimised and verified against the simulator; levels 2-4
+produce valid, crash-free, race-finishing strategies but their scoring (fuel-bonus
+targeting, weather tyre windows, per-stint corner re-planning) is untuned until real
+level files land — see WORKPLAN.md "Remaining".
 
 ## The two contracts that decouple everything
 

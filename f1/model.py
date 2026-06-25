@@ -99,15 +99,15 @@ class Level:
                 return c
         return self.weather[0]
 
-    def weather_at(self, elapsed_s: float) -> str:
-        """Active weather condition name at a given elapsed race time.
+    def active_condition(self, elapsed_s: float) -> WeatherCondition | None:
+        """The weather condition in effect at a given elapsed race time.
 
         Conditions cycle in list order starting from the race's starting
         condition; a non-positive duration is treated as 'never changes'.
         """
         conds = self.weather
         if not conds:
-            return "dry"
+            return None
         idx = next(
             (k for k, c in enumerate(conds) if c.id == self.race.starting_weather_condition_id),
             0,
@@ -116,10 +116,14 @@ class Level:
         for _ in range(len(conds) * 1000):  # generous guard against runaway loops
             d = conds[idx].duration
             if d <= 0 or remaining < d:
-                return conds[idx].condition
+                return conds[idx]
             remaining -= d
             idx = (idx + 1) % len(conds)
-        return conds[idx].condition
+        return conds[idx]
+
+    def weather_at(self, elapsed_s: float) -> str:
+        cond = self.active_condition(elapsed_s)
+        return cond.condition if cond else "dry"
 
 
 def load_level(path: str) -> Level:

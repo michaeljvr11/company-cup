@@ -1,43 +1,57 @@
-"""Simulator tests — fill these in as Track A implements f1/simulate.py.
+"""Simulator + level-1 optimiser golden tests.
 
-The first job once simulate() exists: pin down the per-segment numbers by hand
-(from docs/PHYSICS.md worked examples) and assert them here. That gives the
-optimiser a trustworthy oracle.
+These pin the verified level-1 behaviour so regressions in the physics or the optimiser
+are caught immediately. Numbers were hand-checked against docs/PHYSICS.md.
 """
 
 import sys
 from pathlib import Path
 
-import pytest
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 
-from f1 import simulate as sim
 from f1.model import load_level
+from f1.physics import fuel_used, max_corner_speed, tyre_friction
+from f1.simulate import features, simulate
 from f1.strategy import build_strategy
 
 LEVEL1 = str(Path(__file__).resolve().parents[1] / "levels" / "level1.json")
 
 
-def _implemented() -> bool:
-    try:
-        sim.simulate(load_level(LEVEL1), build_strategy(load_level(LEVEL1), 1))
-        return True
-    except NotImplementedError:
-        return False
+def test_physics_matches_spec_examples():
+    # corner: sqrt(0.9 * 9.8 * 50) = 21 (page 8)
+    assert round(max_corner_speed(0.9, 50), 3) == 21.0
+    # fuel: v 50->70 over 800 m = 0.40432 l (page 7)
+    assert round(fuel_used(0.0005, 50, 70, 800), 5) == 0.40432
 
 
-@pytest.mark.skipif(not _implemented(), reason="simulate() not implemented yet")
-def test_level1_baseline_finishes_without_crashes():
+def test_soft_dry_friction():
     level = load_level(LEVEL1)
-    result = sim.simulate(level, build_strategy(level, 1))
-    assert result.finished
-    assert result.crashes == 0
-    assert result.total_time > 0
+    # Soft base 1.8, dry multiplier 1.18, no degradation -> 2.124
+    assert round(tyre_friction(level.tyre_props(1), 0.0, "dry"), 4) == 2.124
 
 
-@pytest.mark.skipif(not _implemented(), reason="simulate() not implemented yet")
-def test_deterministic():
+def test_level1_optimiser_is_clean_and_fast():
     level = load_level(LEVEL1)
     strat = build_strategy(level, 1)
-    assert sim.simulate(level, strat).total_time == sim.simulate(level, strat).total_time
+    assert strat.initial_tyre_id == 1  # Soft = highest friction = fastest
+    res = simulate(level, strat, **features(1))
+    assert res.crashes == 0
+    assert res.blowouts == 0
+    assert res.fuel_used < level.car.initial_fuel  # finishes without refuelling
+    assert round(res.total_time, 1) == 4952.1  # golden time
+
+
+def test_no_corner_exceeds_its_limit():
+    level = load_level(LEVEL1)
+    res = simulate(level, build_strategy(level, 1), **features(1))
+    fr = tyre_friction(level.tyre_props(1), 0.0, "dry")
+    by_id = {s.id: s for s in level.track.segments}
+    for sr in res.segments:
+        if sr.type == "corner":
+            assert sr.entry_speed <= max_corner_speed(fr, by_id[sr.id].radius, level.car.crawl_speed) + 1e-6
+
+
+def test_deterministic():
+    level = load_level(LEVEL1)
+    s = build_strategy(level, 1)
+    assert simulate(level, s, **features(1)).total_time == simulate(level, s, **features(1)).total_time

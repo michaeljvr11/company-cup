@@ -46,7 +46,7 @@ def main(argv: list[str] | None = None) -> int:
     print(f"wrote {out_path}  (level {level_num}, {level.race.laps} laps)")
 
     try:
-        result = sim.simulate(level, strategy)
+        result = sim.simulate(level, strategy, **sim.features(level_num))
         score = final_score(
             level_num,
             result.total_time,

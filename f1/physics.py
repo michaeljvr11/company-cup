@@ -61,6 +61,57 @@ def time_over_distance(v0: float, accel: float, distance: float) -> float:
     return (math.sqrt(max(0.0, disc)) - v0) / accel
 
 
+def straight_kinematics(
+    v0: float,
+    target: float,
+    brake_start: float,
+    length: float,
+    accel: float,
+    brake: float,
+    crawl: float,
+    max_speed: float,
+) -> tuple[float, float, float]:
+    """Replay a straight: accelerate toward `target` (capped at max_speed), cruise, then
+    brake over the final `brake_start` metres. Returns (exit_speed, time, brake_point_speed).
+
+    Implements assumption 11 (no decel to a target below entry speed) and the crawl-speed
+    floor. Shared by simulate.py and strategy.py so both agree on the numbers.
+    """
+    b = min(max(brake_start, 0.0), length)
+    non_brake = length - b
+    vt = min(target, max_speed)
+
+    if vt > v0 and accel > 0:
+        d_acc = (vt * vt - v0 * v0) / (2 * accel)
+        if d_acc >= non_brake:
+            v_bp = min(speed_after_distance(v0, accel, non_brake), max_speed)
+            t1 = time_over_distance(v0, accel, non_brake)
+        else:
+            t_acc = (vt - v0) / accel
+            t_cruise = (non_brake - d_acc) / vt if vt > 0 else 0.0
+            v_bp = vt
+            t1 = t_acc + t_cruise
+    else:  # follow-through: no acceleration, cruise at entry speed
+        v_bp = v0
+        t1 = non_brake / v0 if v0 > 0 else 0.0
+
+    if b <= 0 or v_bp <= crawl:
+        v_exit = v_bp
+        t2 = (b / v_bp) if (b > 0 and v_bp > 0) else 0.0
+    else:
+        v_end_sq = v_bp * v_bp - 2 * brake * b
+        crawl_sq = crawl * crawl
+        if v_end_sq >= crawl_sq:
+            v_exit = math.sqrt(v_end_sq)
+            t2 = (v_bp - v_exit) / brake
+        else:  # reach crawl floor partway, then cruise at crawl
+            d_to_crawl = (v_bp * v_bp - crawl_sq) / (2 * brake)
+            v_exit = crawl
+            t2 = (v_bp - crawl) / brake + (b - d_to_crawl) / crawl
+
+    return v_exit, t1 + t2, v_bp
+
+
 # --- Fuel -------------------------------------------------------------------------
 
 def fuel_used(k_base: float, v_initial: float, v_final: float, distance: float) -> float:
