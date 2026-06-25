@@ -15,7 +15,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from f1.model import load_level
 from f1.score import base_score, fuel_bonus, tyre_bonus
 from f1.simulate import features, simulate
-from f1.strategy import build_strategy
+from f1.strategy import build_strategy, solve_level3_weather_beam
 from f1.strategy_io import to_submission
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -52,3 +52,19 @@ def test_level_deterministic(n):
     a = to_submission(build_strategy(lvl, n))
     b = to_submission(build_strategy(lvl, n))
     assert a == b
+
+
+def test_level3_weather_beam_public_api_is_clean():
+    lvl = load_level(str(ROOT / "levels/level3.json"))
+    strat = solve_level3_weather_beam(lvl, beam_width=1, lambda_fuel_values=(0.0,))
+    res = simulate(lvl, strat, **features(3))
+    assert res.crashes == 0
+    assert res.blowouts == 0
+    assert len(strat.laps) == lvl.race.laps
+    assert _score(3, lvl, res) >= SCORE_FLOOR[3]
+
+
+def test_level3_weather_cycles():
+    lvl = load_level(str(ROOT / "levels/level3.json"))
+    cycle = sum(c.duration for c in lvl.weather)
+    assert lvl.weather_at(0) == lvl.weather_at(cycle)

@@ -25,7 +25,7 @@ def _infer_level(path: str, override: int | None) -> int:
 def main(argv: list[str] | None = None) -> int:
     argv = list(sys.argv[1:] if argv is None else argv)
     if not argv:
-        print("usage: python -m f1 <level.json> [out.txt] [--level N]")
+        print("usage: python -m f1 <level.json> [out.txt] [--level N] [--level3-beam-width N] [--level3-lambdas CSV|full] [--level3-log]")
         return 1
 
     level_override = None
@@ -34,12 +34,37 @@ def main(argv: list[str] | None = None) -> int:
         level_override = int(argv[i + 1])
         del argv[i : i + 2]
 
+    level3_beam_width = None
+    if "--level3-beam-width" in argv:
+        i = argv.index("--level3-beam-width")
+        level3_beam_width = int(argv[i + 1])
+        del argv[i : i + 2]
+
+    level3_lambda_fuel = "default"
+    if "--level3-lambdas" in argv:
+        i = argv.index("--level3-lambdas")
+        raw = argv[i + 1].strip().lower()
+        level3_lambda_fuel = None if raw == "full" else tuple(float(x) for x in raw.split(",") if x)
+        del argv[i : i + 2]
+
+    level3_log = False
+    if "--level3-log" in argv:
+        argv.remove("--level3-log")
+        level3_log = True
+
     level_path = argv[0]
     out_path = argv[1] if len(argv) > 1 else "output/submission.txt"
     level_num = _infer_level(level_path, level_override)
 
     level = load_level(level_path)
-    strategy = build_strategy(level, level_num)
+    kwargs = {}
+    if level_num == 3:
+        if level3_beam_width is not None:
+            kwargs["level3_beam_width"] = level3_beam_width
+        if level3_lambda_fuel != "default":
+            kwargs["level3_lambda_fuel"] = level3_lambda_fuel
+        kwargs["level3_log"] = level3_log
+    strategy = build_strategy(level, level_num, **kwargs)
 
     Path(out_path).parent.mkdir(parents=True, exist_ok=True)
     write_submission(strategy, out_path)
