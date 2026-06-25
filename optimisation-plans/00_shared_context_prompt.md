@@ -45,8 +45,14 @@ targets. Keep this as evidence that the official leaderboard may use
 until we have the exact submitted strategy telemetry and official score for the
 same run.
 
-Your job is to improve this solver portfolio without breaking deterministic,
-clean submissions.
+Project end state: build a portfolio of solver candidates for every level, then
+simulate and score those candidates and emit the best deterministic submission.
+The portfolio should be level-appropriate: Level 1 can be a small analytical
+portfolio, while Level 4 should be broad enough to include multiple discrete and
+continuous search styles.
+
+Your job is to evolve the current single-entry solver toward that portfolio
+without breaking deterministic, clean submissions.
 
 ## Problem Summary
 
@@ -218,9 +224,10 @@ Instead:
 
 The simulator is the source of truth.
 
-## Current Solver Portfolio
+## Current Solver Entry Point
 
-Current implementation in `f1/strategy.py`:
+The current implementation is not yet a full multi-solver portfolio. It has one
+public level-dispatched entry point in `f1/strategy.py`:
 
 ```text
 Level 1:
@@ -243,20 +250,31 @@ Level 4:
   with degradation margins to avoid crashes/blowouts.
 ```
 
-Future improvement ideas, not currently implemented:
+## Target Solver Portfolio
+
+The intended target is a portfolio for each level. Future improvement ideas, not
+currently implemented:
 
 ```text
+Level 1:
+  analytical baseline variants
+  tyre and safety-margin sweep
+  braking-point refinement / validation pass
+
 Level 2:
+  current flat-out + fuel repair baseline
   fuel-aware resource-constrained dynamic programming
   Lagrangian fuel/time sweep
   continuous speed refinement
 
 Level 3:
+  current iterative weather baseline
   time-dependent weather-aware beam search / dynamic programming
   tyre strategy enumeration
   continuous speed refinement
 
 Level 4:
+  current wear-balanced weather baseline
   hybrid beam search over pit/tyre/fuel strategy
   Pareto label-setting dynamic programming
   memetic/evolutionary optimiser

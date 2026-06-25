@@ -15,9 +15,10 @@ Treat this document as a future extension plan.
 
 ## Goal
 
-If adding multiple candidate generators, create a deterministic portfolio system
-that can run level-specific solvers and choose the highest-scoring
-simulator-validated candidate.
+Create a deterministic, level-scoped portfolio system. Every level should have a
+portfolio of candidate generators, with the portfolio size matching the level's
+complexity. The runner simulates all generated candidates and chooses the
+highest-scoring simulator-validated submission.
 
 ## Inputs
 
@@ -47,25 +48,30 @@ Level 3: build_strategy(level, 3)
 Level 4: build_strategy(level, 4)
 ```
 
-Potential future portfolio mapping:
+Target future portfolio mapping:
 
 ```text
 Level 1:
-  analytical_level1
+  analytical_baseline
+  tyre_and_safety_margin_sweep
+  braking_refinement
 
 Level 2:
+  current_static_fuel_repair_baseline
   analytical_baseline
   fuel_dp
   fuel_lagrangian_sweep
   continuous_refinement
 
 Level 3:
+  current_iterative_weather_baseline
   weather_greedy
   weather_beam
   fuel_lagrangian_sweep
   continuous_refinement
 
 Level 4:
+  current_wear_balanced_baseline
   greedy_stint
   beam_strategy
   pareto_dp_if_available
