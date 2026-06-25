@@ -1,14 +1,23 @@
-# Parallel Prompt: Implement Portfolio Runner and Candidate Tournament
+# Parallel Prompt: Future Portfolio Runner and Candidate Tournament
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need a top-level portfolio runner that executes multiple solvers, simulates
-their candidates and emits the best valid submission.
+There is no portfolio runner in the current codebase. The current CLI path is:
+
+```text
+python3 -m f1 levels/levelN.json output/levelN.txt --level N
+```
+
+which calls `build_strategy()` once for the requested level. `tools/eval.py` is a
+score-breakdown harness for the current built-in solver, not a candidate tournament.
+
+Treat this document as a future extension plan.
 
 ## Goal
 
-Create a deterministic portfolio system that can run level-specific solvers and
-choose the highest-scoring simulator-validated candidate.
+If adding multiple candidate generators, create a deterministic portfolio system
+that can run level-specific solvers and choose the highest-scoring
+simulator-validated candidate.
 
 ## Inputs
 
@@ -29,7 +38,16 @@ deep
 
 ## Solver Portfolio
 
-Use this mapping:
+The current mapping is simply:
+
+```text
+Level 1: build_strategy(level, 1)
+Level 2: build_strategy(level, 2)
+Level 3: build_strategy(level, 3)
+Level 4: build_strategy(level, 4)
+```
+
+Potential future portfolio mapping:
 
 ```text
 Level 1:
@@ -146,13 +164,13 @@ top 20 candidates table
 
 ## CLI
 
-Implement a CLI similar to:
+Potential future CLI:
 
 ```bash
 python run_portfolio.py --level 4 --input levels/level4.json --mode deep --output output.txt
 ```
 
-or equivalent in the project language.
+or equivalent in the current `python3 -m f1 ...` CLI.
 
 ## Determinism
 

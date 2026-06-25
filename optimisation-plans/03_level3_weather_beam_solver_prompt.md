@@ -1,8 +1,16 @@
-# Parallel Prompt: Implement Level 3 Weather-Aware Beam Search Solver
+# Parallel Prompt: Future Level 3 Weather-Aware Search Solver
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need a Level 3 solver that handles weather, tyre choice and fuel strategy.
+Level 3 is currently handled inside `f1/strategy.py` by `_weather_plan()` plus
+`_repair_fuel()`. It iterates simulate -> sample per-lap weather/deceleration ->
+reassemble per-lap braking points until stable. Tyre degradation is not active in
+Level 3. For the current level data, the schedule uses Soft for the whole race.
+
+Current verified output is clean and deterministic: score about 859,196, time
+about 21,912.8 s, fuel used about 529.8 L, 3 pits, no crashes and no blowouts.
+No beam search, candidate portfolio, or public `solve_level3_weather_beam()` API
+exists yet. Treat the beam-search details below as a future extension plan.
 
 ## Level 3 Constraints
 
@@ -12,7 +20,8 @@ Level 3 introduces:
 - weather-dependent acceleration
 - weather-dependent braking
 - weather-dependent tyre friction
-- weather-dependent tyre degradation rates if implemented by simulator
+- weather-dependent tyre degradation rates in the data, but degradation is not
+  applied by `features(3)`
 - tyre changes at pit stops
 - fuel management remains relevant
 
@@ -21,15 +30,17 @@ strategy.
 
 ## Goal
 
-Implement a deterministic time-dependent beam search / dynamic programming solver
-that explores tyre, pit and fuel strategies under changing weather.
+If extending beyond the current implementation, implement a deterministic
+time-dependent beam search / dynamic programming solver that explores tyre, pit
+and fuel strategies under changing weather.
 
 ## Weather Handling
 
-Implement or reuse:
+Reuse the existing model helper:
 
 ```text
-weather_at(time_s) -> weather_condition
+Level.active_condition(time_s) -> WeatherCondition | None
+Level.weather_at(time_s) -> condition name
 ```
 
 Weather conditions cycle if the race exceeds the total weather schedule duration.
@@ -181,12 +192,16 @@ heavy rain: Wet > Intermediate > Soft > Medium > Hard
 
 ## Deliverables
 
-Implement:
+Current public entry point:
 
 ```text
-solve_level3_weather_beam(level_json) -> submission_json
-generate_level3_candidates(level_json, beam_width, lambda_fuel) -> list[candidate]
+build_strategy(level, 3) -> Strategy
+to_submission(strategy) -> submission_json
 ```
+
+If adding search helpers, either keep them private and wire them through
+`build_strategy(level, 3)` or add public functions deliberately and update the CLI,
+tests and shared context.
 
 Log:
 
@@ -212,5 +227,5 @@ The solver must:
 - correctly handle cyclic weather
 - produce valid strategy JSON
 - evaluate candidates using the simulator
-- beat or match the baseline Level 3 solver
+- beat or match the current Level 3 score
 - expose beam width and lambda sweep configuration

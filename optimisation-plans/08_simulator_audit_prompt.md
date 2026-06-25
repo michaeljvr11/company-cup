@@ -1,15 +1,20 @@
-# Parallel Prompt: Audit Simulator Against Rules
+# Parallel Prompt: Future Simulator Audit Against Rules
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-Before aggressive optimisation, we need to confirm exactly how our simulator
-behaves. The optimiser must match the simulator, even if there are ambiguities in
-the PDF.
+The current simulator is implemented in `f1/simulate.py` and covered by
+`tests/test_simulate.py` plus all-level regression coverage in `tests/test_levels.py`.
+The current code behaviour is summarized in `00_shared_context_prompt.md` and
+`docs/PHYSICS.md`.
+
+This document is a future extension plan for a broader edge-case audit suite, not
+evidence that `simulator_audit_tests` or `simulator_audit_report.md` currently
+exist.
 
 ## Goal
 
-Create a simulator audit suite that tests edge cases and documents actual
-simulator behaviour.
+If more confidence is needed before aggressive optimisation, create a simulator
+audit suite that tests edge cases and documents actual simulator behaviour.
 
 ## Areas to Audit
 
@@ -118,15 +123,16 @@ target speed above max speed
 
 ## Deliverables
 
-Create:
+Potential future deliverables:
 
 ```text
 simulator_audit_tests
 simulator_audit_report.md
 ```
 
-The report should describe actual observed behaviour and any differences from
-the PDF.
+The report should describe actual observed behaviour and any differences from the
+PDF. Do not add a report file unless that artifact is explicitly useful for the
+current task.
 
 ## Acceptance Criteria
 

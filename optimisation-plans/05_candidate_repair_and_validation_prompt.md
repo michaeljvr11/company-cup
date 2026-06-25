@@ -1,13 +1,20 @@
-# Parallel Prompt: Implement Candidate Repair and Validation Layer
+# Parallel Prompt: Future Candidate Repair and Validation Layer
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need a shared repair layer used by all solvers.
+There is no shared candidate repair or validation module in the current codebase.
+The only repair helper is `_repair_fuel()` inside `f1/strategy.py`, and speed / tyre
+safety are built directly into `_speed_plan()`, `_weather_plan()`, `_assemble()` and
+`_tyre_schedule_l4()`. Validation currently means calling `simulate()` and scoring
+with `score.py` / `tools/eval.py`.
+
+Treat this document as a future extension plan, not a description of existing APIs.
 
 ## Goal
 
-Implement a deterministic candidate repair system that takes a high-level
-candidate and converts it into a valid, simulator-ready submission JSON.
+If adding a broader search portfolio, implement a deterministic candidate repair
+system that takes a high-level candidate and converts it into a valid,
+simulator-ready `Strategy` / submission JSON.
 
 This repair layer should make optimisation easier by allowing solvers to produce
 imperfect candidates.
@@ -131,7 +138,7 @@ max_repair_iterations = 5
 
 ## Validation
 
-Implement:
+Potential future API:
 
 ```text
 validate_submission(level_json, submission_json) -> validation_result
@@ -152,7 +159,7 @@ diagnostics
 
 ## Repair API
 
-Implement:
+Potential future repair API:
 
 ```text
 repair_candidate(level_json, candidate, safety_factor) -> submission_json
@@ -169,6 +176,9 @@ and:
 ```text
 simulate_and_score(level_json, submission_json) -> score_result
 ```
+
+If these are added, wire them into `build_strategy()`, `tools/eval.py`, or a new CLI
+path, and update `00_shared_context_prompt.md` so the API list stays accurate.
 
 ## Acceptance Criteria
 

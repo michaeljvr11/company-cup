@@ -1,13 +1,18 @@
-# Parallel Prompt: Implement Continuous Speed Refinement
+# Parallel Prompt: Future Continuous Speed Refinement
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need a continuous optimiser that improves candidate strategies after the
-discrete choices are fixed.
+There is no continuous speed-refinement module in the current codebase. Current
+speed planning is analytical and lives in `f1/strategy.py`: `_speed_plan()` for
+Level 1/2 and `_assemble()` inside `_weather_plan()` for Level 3/4. The code uses
+fixed target max speed and computes braking points; it does not optimise raw speed
+multipliers with coordinate search, SciPy or CMA-ES.
+
+Treat this document as a future extension plan.
 
 ## Goal
 
-Given a candidate with fixed:
+If adding refinement, given a candidate with fixed:
 
 ```text
 initial tyre
@@ -127,11 +132,14 @@ For each input candidate:
 
 ## Deliverables
 
-Implement:
+Potential future API:
 
 ```text
 refine_candidate_speeds(level_json, candidate, mode) -> refined_candidate
 ```
+
+If this is added, wire it through `build_strategy()` or a portfolio runner and make
+sure the refined candidate is never selected without simulator validation.
 
 Modes:
 

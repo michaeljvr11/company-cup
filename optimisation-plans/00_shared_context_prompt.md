@@ -2,14 +2,35 @@
 
 You are helping us optimise an Entelect Grand Prix race strategy generator.
 
-We already have:
+We currently have:
 
-- Baseline solvers for each level.
-- A simulator that can replay a generated strategy and return time, fuel usage,
-  tyre degradation, crashes, blowouts and score.
-- Level JSON files containing car, race, track, tyre and weather data.
+- `f1/model.py`: level JSON loader for `levels/level1.json` through
+  `levels/level4.json`.
+- `f1/simulate.py`: simulator that replays a `Strategy` and returns time, fuel
+  usage, tyre degradation, crashes and blowouts.
+- `f1/score.py`: scoring formulas.
+- `f1/strategy.py`: the deterministic solver entry point,
+  `build_strategy(level, level_num)`.
+- `f1/strategy_io.py`: strategy dataclasses and submission JSON serialisation.
+- `tools/eval.py`: live score breakdown for all levels.
 
-Your job is to improve our solver portfolio.
+There are no separate public `solve_level*_...` APIs, no shared candidate repair
+module, no portfolio runner, and no continuous refinement module yet. Future
+optimisers should either preserve the existing `build_strategy()` entry point or
+intentionally add new APIs and wire them through the CLI/tests.
+
+Current verified simulator scores from `python3 tools/eval.py`:
+
+```text
+L1  201,934   0 crashes, 0 blowouts, 0 pits
+L2  913,471   0 crashes, 0 blowouts, 2 pits
+L3  859,196   0 crashes, 0 blowouts, 3 pits
+L4 1,490,777  0 crashes, 0 blowouts, 14 pits / 8 tyre changes
+Grand total: 3,465,378
+```
+
+Your job is to improve this solver portfolio without breaking deterministic,
+clean submissions.
 
 ## Problem Summary
 
@@ -27,9 +48,9 @@ A race strategy JSON must specify:
     - `tyre_change_set_id`
     - `fuel_refuel_amount_l`
 
-The car accelerates and brakes at constant rates. Weather can modify acceleration
-and braking. The car starts at 0 m/s. After a pit stop, it exits at pit lane
-speed.
+The car accelerates and brakes at constant rates. Weather modifies acceleration
+and braking through the active condition's multipliers. The car starts at 0 m/s.
+After a pit stop, it exits at pit lane speed.
 
 The objective is to maximise final score, which depends mainly on race time, fuel
 usage and, in Level 4, tyre degradation.
@@ -76,17 +97,39 @@ fuel_used =
   (K_base + K_drag * ((initial_speed + final_speed) / 2)^2) * distance
 ```
 
-Constants:
+Constants and code source of truth:
 
 ```text
-K_base = 0.0005
-K_drag = 0.0000000015
+K_base = car.fuel_consumption from the level JSON
+K_FUEL_BASE = 0.0005      # documented fallback/default
+K_FUEL_DRAG = 0.0000000015
 K_STRAIGHT = 0.0000166
 K_BRAKING = 0.0398
 K_CORNER = 0.000265
 ```
 
+Current simulator behaviour:
+
+- Weather is sampled once at segment start from elapsed race time.
+- Weather schedules cycle in list order from `starting_weather_condition_id`.
+- Effective straight acceleration/braking are `car.accel * acceleration_multiplier`
+  and `car.brake * deceleration_multiplier`.
+- Tyre degradation is applied only when `features(level_num)["apply_degradation"]`
+  is true, which currently means level 4 and above.
+- Crash check is strict: a corner crashes when entry speed is greater than the
+  computed max corner speed.
+- Crash mode adds the corner penalty, adds 0.1 degradation in level 4, uses crawl
+  speed through consecutive corners, and clears on the next straight.
+- Fuel-out or tyre blowout enters limp mode at segment granularity until a pit.
+- Pit stops happen only at lap end, cap refuel to tank capacity, clear limp/crawl,
+  and exit at pit lane speed.
+- Tyre set wear is retained by tyre set id across swaps.
+
 ## Tyre Compounds
+
+`f1/constants.py` contains canonical fallback base friction values. The level JSON
+can override them, and `load_level()` prefers the JSON value when present. In the
+current level files, level 4 overrides Wet base friction to 1.6.
 
 Base friction:
 
@@ -159,16 +202,34 @@ Instead:
 
 The simulator is the source of truth.
 
-## Desired Solver Portfolio
+## Current Solver Portfolio
 
-We want multiple solvers, not one monolithic optimiser.
-
-Recommended portfolio:
+Current implementation in `f1/strategy.py`:
 
 ```text
 Level 1:
-  analytical optimal solver
+  `_static_plan`: try the first id from each available tyre set, generate a
+  flat-out plan, brake analytically for each upcoming corner chain, simulate,
+  and choose the clean fastest candidate.
 
+Level 2:
+  Same static speed plan as Level 1 plus `_repair_fuel`, which inserts
+  refuel-to-full pits before the first lap that would limp.
+
+Level 3:
+  `_weather_plan`: iterate simulate -> sample per-lap weather/deceleration ->
+  reassemble per-lap braking points. Tyre schedule is currently one best tyre
+  for the race; for current level 3 data this is Soft.
+
+Level 4:
+  `_weather_plan` with degradation enabled. `_tyre_schedule_l4` balances wear
+  across all available tyre sets, chooses set ids by stint weather, and plans
+  with degradation margins to avoid crashes/blowouts.
+```
+
+Future improvement ideas, not currently implemented:
+
+```text
 Level 2:
   fuel-aware resource-constrained dynamic programming
   Lagrangian fuel/time sweep
@@ -186,16 +247,17 @@ Level 4:
   continuous speed refinement
 ```
 
-## General Deliverables
+## Current Extension Contracts
 
-When implementing a solver, provide:
+When implementing or improving a solver, preserve or update these contracts:
 
-1. Clean deterministic code.
-2. Reusable candidate representation.
-3. Conversion from candidate to submission JSON.
-4. Validation through the simulator.
-5. Candidate scoring and ranking.
-6. Logs showing:
+1. `build_strategy(level: Level, level_num: int) -> Strategy` remains the CLI path
+   unless you intentionally replace and wire it.
+2. Submission output goes through `Strategy` and `to_submission()` /
+   `write_submission()`.
+3. Simulator validation uses `simulate(level, strategy, **features(level_num))`.
+4. Score calculation uses `final_score()` or the same components as `tools/eval.py`.
+5. Any new search must be deterministic and should log enough to compare:
    - best score
    - race time
    - fuel used
@@ -203,7 +265,8 @@ When implementing a solver, provide:
    - pit stops
    - crashes
    - blowouts
-7. Unit tests or small integration tests where possible.
+6. Add or update tests where possible. Existing coverage includes `tests/test_smoke.py`,
+   `tests/test_simulate.py`, and `tests/test_levels.py`.
 
 ## Determinism
 
@@ -217,17 +280,17 @@ If randomness is used:
 
 ## Safety Margins
 
-When computing corner entry speeds, support configurable safety factors:
+Current safety constants in `f1/strategy.py`:
 
 ```text
-1.000
-0.999
-0.997
-0.995
-0.990
+CORNER_SAFETY_STATIC = 0.999  # L1/L2
+CORNER_SAFETY = 0.985         # L3/L4
+DEG_MARGIN = 1.15             # L4 degradation planning
 ```
 
-Use simulator validation to choose the fastest valid candidate.
+Future solvers may sweep additional safety factors, but the current code does not
+expose that as a public configuration. Always use simulator validation to choose
+the fastest valid candidate.
 
 ## Key Implementation Warning
 

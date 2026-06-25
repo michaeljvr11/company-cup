@@ -1,9 +1,16 @@
-# Parallel Prompt: Implement Level 2 Fuel-Aware DP Solver
+# Parallel Prompt: Future Level 2 Fuel-Aware DP Solver
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need a strong Level 2 solver that optimises the trade-off between race time
-and fuel usage.
+Level 2 is currently handled inside `f1/strategy.py` by `_static_plan()` plus
+`_repair_fuel()`. The current solver drives flat-out, simulates the strategy, and
+inserts refuel-to-full pits before the first lap that would limp. Current verified
+output is clean and deterministic: score about 913,471, time about 10,398.3 s,
+fuel used about 312.6 L, 2 pits, no crashes and no blowouts.
+
+No DP, Lagrangian sweep, candidate portfolio, or public
+`solve_level2_fuel_dp()` API exists yet. Treat the DP content below as a future
+extension plan.
 
 ## Level 2 Constraints
 
@@ -18,8 +25,9 @@ Tyre degradation and weather complexity are not the main focus.
 
 ## Goal
 
-Implement a deterministic resource-constrained solver for Level 2 using dynamic
-programming / label-setting plus scalarised fuel-time sweeps.
+If extending beyond the current implementation, implement a deterministic
+resource-constrained solver for Level 2 using dynamic programming / label-setting
+plus scalarised fuel-time sweeps.
 
 ## Main Idea
 
@@ -151,12 +159,16 @@ Finally select the highest score.
 
 ## Deliverables
 
-Implement:
+Current public entry point:
 
 ```text
-solve_level2_fuel_dp(level_json) -> submission_json
-generate_level2_candidates(level_json) -> list[candidate]
+build_strategy(level, 2) -> Strategy
+to_submission(strategy) -> submission_json
 ```
+
+If adding DP helpers, either keep them private and wire them through
+`build_strategy(level, 2)` or add public functions deliberately and update the CLI,
+tests and shared context.
 
 Add logs:
 
@@ -177,6 +189,6 @@ The solver must:
 
 - be deterministic
 - never select a candidate that runs out of fuel
-- beat or match the baseline Level 2 solver
+- beat or match the current Level 2 score
 - produce a portfolio of scored candidates
 - use simulator score for final selection

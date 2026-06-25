@@ -1,8 +1,21 @@
-# Parallel Prompt: Implement Level 1 Analytical Solver
+# Parallel Prompt: Improve Level 1 Analytical Solver
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need a high-quality Level 1 solver.
+Level 1 is already implemented in `f1/strategy.py` through:
+
+```text
+build_strategy(level, 1)
+   -> _static_plan(level, 1)
+   -> _speed_plan(...)
+   -> _optimal_brake_start(...)
+```
+
+Current verified output is clean and deterministic: score about 201,934, time
+about 4,952.1 s, start tyre 1 / Soft, no pits, no crashes and no blowouts.
+There is no public `solve_level1_analytical()` function.
+
+Use this prompt for validating or improving the current Level 1 solver.
 
 ## Level 1 Constraints
 
@@ -18,8 +31,8 @@ This should be solved analytically, not with random search.
 
 ## Goal
 
-Implement a deterministic Level 1 analytical solver that produces the fastest valid
-strategy according to the simulator.
+Improve or verify the deterministic Level 1 analytical solver so it produces the
+fastest valid strategy according to the simulator.
 
 ## Algorithm
 
@@ -40,30 +53,31 @@ chain_safe_speed = min(max_safe_speed of all corners in chain)
    - target car max speed where possible
    - brake as late as possible
    - enter each corner chain at or below safe speed
-   - propagate constraints backwards if a straight is too short to brake enough
+   - if adding new logic, handle any too-short straight case explicitly
 
 7. Generate:
    - `target_m/s` for every straight
    - `brake_start_m_before_next` for every straight
    - corner entries unchanged
 
-8. Simulate every candidate and select the highest score.
+8. Simulate every candidate and select the fastest clean strategy. For Level 1,
+   this is equivalent to selecting the highest score.
 
-## Backward Constraint Propagation
+## Current Brake Planning
 
-If a straight has length `L` and the required end speed is `v_end`, then the
-maximum safe start speed if braking over the whole straight is:
+The current code does not implement a general backward propagation pass. Instead,
+`_optimal_brake_start()` solves the latest brake point for a straight, using the
+current entry speed and the required safe speed for the next corner chain. `_speed_plan()`
+runs a two-lap forward pass and records the second pass braking points to account
+for multi-lap carry-over.
+
+If a future track contains a straight that is too short to brake from the entry
+speed to the required end speed, add explicit constraint propagation. The useful
+formula is:
 
 ```text
 v_start_max = sqrt(v_end^2 + 2 * brake * L)
 ```
-
-Use this to propagate speed constraints backwards around the lap.
-
-Account for the fact that the race start speed is 0 m/s.
-
-For multi-lap races, handle the speed carry-over from the final segment of one
-lap to the first segment of the next lap unless simulator rules say otherwise.
 
 ## Brake Point Calculation
 
@@ -97,19 +111,16 @@ Clamp to:
 If braking distance exceeds straight length, reduce target/entry speed and
 recompute.
 
-## Safety Variants
+## Safety Margin
 
-Generate multiple candidates using corner safety factors:
+The current Level 1/2 code uses one fixed margin:
 
 ```text
-1.000
-0.999
-0.997
-0.995
-0.990
+CORNER_SAFETY_STATIC = 0.999
 ```
 
-For each corner chain:
+Future tuning may generate multiple candidates using additional safety factors,
+but that sweep is not implemented yet. If added, compute:
 
 ```text
 effective_safe_speed = chain_safe_speed * safety_factor
@@ -119,13 +130,16 @@ Simulate all variants and choose the best valid candidate.
 
 ## Deliverables
 
-Implement:
+Use the current public entry point:
 
 ```text
-solve_level1_analytical(level_json) -> submission_json
+build_strategy(level, 1) -> Strategy
+to_submission(strategy) -> submission_json
 ```
 
-Also expose debug output:
+If adding a dedicated Level 1 helper, wire it through `build_strategy()` and expose
+debug output through the CLI or `tools/eval.py` rather than leaving an unused API.
+Useful debug output:
 
 ```text
 candidate tyre
@@ -142,5 +156,5 @@ The solver must:
 - be deterministic
 - produce valid JSON
 - avoid crashes in the best selected strategy
-- beat or match the current baseline Level 1 solver
+- beat or match the current Level 1 score/time
 - produce reproducible output from the same input

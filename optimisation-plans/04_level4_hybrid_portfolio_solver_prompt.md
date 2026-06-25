@@ -1,8 +1,19 @@
-# Parallel Prompt: Implement Level 4 Hybrid Portfolio Solver
+# Parallel Prompt: Future Level 4 Hybrid Portfolio Solver
 
 Use the shared context from `00_shared_context_prompt.md`.
 
-We need the strongest possible Level 4 solver.
+Level 4 is currently handled inside `f1/strategy.py` by `_weather_plan()` with
+degradation enabled. `_tyre_schedule_l4()` balances wear across all available tyre
+sets, chooses set ids by stint weather, applies tyre changes at lap end, and uses
+degradation margins to avoid crashes/blowouts. `_repair_fuel()` handles refuelling.
+
+Current verified output is clean and deterministic: score about 1,490,777, time
+about 48,236.2 s, fuel used about 873.9 L, total degradation about 6.55, 14 pits,
+8 tyre changes, no crashes and no blowouts.
+
+No hybrid portfolio runner, Pareto DP, memetic search, continuous refinement, or
+public `solve_level4_hybrid()` API exists yet. Treat the portfolio details below
+as a future extension plan.
 
 ## Level 4 Constraints
 
@@ -23,7 +34,8 @@ This is a mixed discrete-continuous optimisation problem.
 
 ## Goal
 
-Implement a hybrid portfolio solver combining:
+If extending beyond the current implementation, implement a hybrid portfolio
+solver combining:
 
 1. greedy stint planning
 2. beam search over pit/tyre/fuel strategy
@@ -270,12 +282,16 @@ The final solver should:
 
 ## Deliverables
 
-Implement:
+Current public entry point:
 
 ```text
-solve_level4_hybrid(level_json) -> submission_json
-generate_level4_candidates(level_json) -> list[candidate]
+build_strategy(level, 4) -> Strategy
+to_submission(strategy) -> submission_json
 ```
+
+If adding portfolio helpers, either keep them private and wire them through
+`build_strategy(level, 4)` or add public functions deliberately and update the CLI,
+tests and shared context.
 
 Log:
 
@@ -301,5 +317,5 @@ The solver must:
 - manage finite tyre sets correctly
 - avoid blowouts in selected candidate unless intentionally justified
 - evaluate using simulator score
-- beat or match baseline Level 4 solver
+- beat or match the current Level 4 score
 - support fast/normal/deep optimisation modes
